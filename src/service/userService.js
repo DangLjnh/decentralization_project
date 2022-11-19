@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import mysql from "mysql2/promise";
 import bluebird from "bluebird"; // use for promise
+import db from "../models/";
 const salt = bcrypt.genSaltSync(10);
-
 const hashPassword = (userPassword) => {
   let hashPassword = bcrypt.hashSync(userPassword, salt); //hash password
   return hashPassword;
@@ -10,71 +10,81 @@ const hashPassword = (userPassword) => {
 
 const createNewUser = async (email, password, username) => {
   let hashPass = hashPassword(password);
-  const connection = await mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    database: "decentralization",
-    Promise: bluebird,
-  });
-  const [rows, fields] = await connection.execute(
-    "INSERT INTO users (email, password, username) VALUES (?, ?, ?)",
-    [email, hashPass, username]
-  );
-  return rows;
+  //User is model
+  try {
+    await db.User.create({
+      email,
+      password: hashPass,
+      username,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const getUserList = async () => {
-  const connection = await mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    database: "decentralization",
-    Promise: bluebird,
+  //test relationship
+  const newUser = await db.User.findOne({
+    where: { id: 1 },
+    attributes: ["id", "username", "email"], //get every data want
+    // include: db.Group, //get data from table Group, if( groupid = 1) -> show data of group 1
+    include: { model: db.Group, attributes: ["name", "desc"] },
+    raw: true, // return object data
+    nest: true, // convert group data to object
   });
-  const [rows, fields] = await connection.execute("SELECT * FROM users");
-  return rows;
+
+  const role = await db.Role.findAll({
+    include: {
+      model: db.Group,
+      where: { id: 1 },
+      attributes: ["name", "desc"], // find in table mapping
+    },
+    raw: true,
+    nest: true,
+  });
+  console.log("🚀 ~ file: userService.js ~ line 41 ~ getUserList ~ role", role);
+  let users = await db.User.findAll();
+  return users;
+  // const connection = await mysql.createConnection({
+  //   host: "localhost",
+  //   user: "root",
+  //   database: "decentralization",
+  //   Promise: bluebird,
+  // });
+  // const [rows, fields] = await connection.execute("SELECT * FROM user");
+  // return rows;
 };
 
-const getUserItem = async (id) => {
-  const connection = await mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    database: "decentralization",
-    Promise: bluebird,
+const getUserItem = async (userID) => {
+  const userItem = await db.User.findOne({
+    where: {
+      id: userID,
+    },
   });
-  const [rows, fields] = await connection.execute(
-    `SELECT * FROM users WHERE ID = ?`,
-    [id]
-  );
-  return rows;
+  return userItem;
 };
 
-const deleteUser = async (id) => {
-  const connection = await mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    database: "decentralization",
-    Promise: bluebird,
+const deleteUser = async (userID) => {
+  await db.User.destroy({
+    where: {
+      id: userID,
+    },
   });
-  const [rows, fields] = await connection.execute(
-    `DELETE FROM users WHERE ID = ?`,
-    [id]
-  );
-  return rows;
 };
 
-const updateUser = async (id, username, email) => {
-  const connection = await mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    database: "decentralization",
-    Promise: bluebird,
-  });
-  // UPDATE currentuser SET ? WHERE uid = ${uid}
-  const [rows, fields] = await connection.execute(
-    `UPDATE users SET email = ?, username = ? WHERE id = ?`,
-    [email, username, id]
+const updateUser = async (userID, username, email) => {
+  let user = await db.User.update(
+    {
+      username,
+      email,
+    },
+    {
+      where: {
+        id: userID,
+      },
+    }
   );
-  return rows;
+  return user;
 };
 
 module.exports = {
@@ -84,3 +94,17 @@ module.exports = {
   getUserItem,
   updateUser,
 };
+
+/**
+ *  const connection = await mysql.createConnection({
+  //   host: "localhost",
+  //   user: "root",
+  //   database: "decentralization",
+  //   Promise: bluebird,
+  // });
+  // const [rows, fields] = await connection.execute(
+  //   "INSERT INTO user (email, password, username) VALUES (?, ?, ?)",
+  //   [email, hashPass, username]
+  // );
+  // return rows;
+ */

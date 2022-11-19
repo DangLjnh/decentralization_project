@@ -14,14 +14,13 @@ const handleHello = (req, res) => {
 const handleUserPage = async (req, res) => {
   //model -> get data from database
   const userList = await getUserList();
-  // deleteUser()
   return res.render("user.ejs", { userList });
 };
 
 // "INSERT INTO users SET ? ", data
-const handleCreateNewUser = (req, res) => {
+const handleCreateNewUser = async (req, res) => {
   const { email, password, username } = req.body;
-  createNewUser(email, password, username);
+  await createNewUser(email, password, username);
   return res.redirect("/user");
 };
 
@@ -32,8 +31,7 @@ const handleDeleteUser = (req, res) => {
 
 const getUpdateUserPage = async (req, res) => {
   const { id } = req.params;
-  const userItemArr = await getUserItem(id);
-  const userItem = userItemArr?.length > 0 && Object.assign({}, ...userItemArr);
+  const userItem = await getUserItem(id);
   return res.render("user-update.ejs", { userItem });
 };
 
